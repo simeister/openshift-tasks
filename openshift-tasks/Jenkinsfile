@@ -18,7 +18,10 @@ podTemplate(
     // Define Maven Command to point to the correct
     // settings for our Nexus installation
     def mvnCmd = "mvn -s ../nexus_settings.xml"
-
+	// Set Development and Production Project Names
+	def devProject  = "0a1a-tasks-dev"
+	def prodProject = "0a1a-tasks-prod"
+	
     // Checkout Source Code.
     stage('Checkout Source') {
       checkout scm
@@ -34,15 +37,17 @@ podTemplate(
 
       // TBD Set the tag for the development image: version + build number
       def devTag  = ""
+	  devTag = "${version}-"+ currentBuild.number
       // Set the tag for the production image: version
       def prodTag = ""
-
+      prodTag = "${version}"
       // Using Maven build the war file
       // Do not run tests in this step
       stage('Build war') {
         echo "Building version ${devTag}"
-
+         
         // TBD: Execute Maven Build
+		sh "${mvnCmd} -DskipTests=true clean package"
       }
 
       // TBD: The next two stages should run in parallel
@@ -52,6 +57,7 @@ podTemplate(
         echo "Running Unit Tests"
 
         // TBD: Execute Unit Tests
+		sh "${mvnCmd} test"
       }
 
       // Using Maven to call SonarQube for Code Analysis
@@ -59,6 +65,7 @@ podTemplate(
         echo "Running Code Analysis"
 
         // TBD: Execute Sonarqube Tests
+		sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube.gpte-hw-cicd.svc.cluster.local:9000"
       }
 
       // Publish the built war file to Nexus
@@ -66,6 +73,7 @@ podTemplate(
         echo "Publish to Nexus"
 
         // TBD: Publish to Nexus
+		sh "mvn -s ./nexus_settings.xml deploy -DskipTests=true"
       }
 
       // Build the OpenShift Image in OpenShift and tag it.
@@ -73,6 +81,8 @@ podTemplate(
         echo "Building OpenShift container image tasks:${devTag}"
 
         // TBD: Build Image, tag Image
+		sh "oc start-build tasks -n=${devProject} --wait=true --from-file=./target/openshift-tasks.war"
+		sh "oc tag ${devProject}/tasks:latest ${devProject}/tasks:${devTag}"
       }
 
       // Deploy the built image to the Development Environment.
@@ -82,6 +92,22 @@ podTemplate(
         // TBD: Deploy to development Project
         //      Set Image, Set VERSION
         //      Make sure the application is running and ready before proceeding
+		sh "oc set image dc/tasks tasks=docker-registry.default.svc:5000/${devProject}/tasks:${devTag} --source=imagestreamtag"
+		sh "oc delete configmap tasks-config -n=${devProject}"
+		sh "oc create configmap tasks-config -n=${devProject} --from-file=./configuration/application-users.properties \
+		--from-file=./configuration/application-roles.properties"
+		sh "oc deploy --latest dc/tasks -n=${devProject}"
+		sh "while : ; do 
+			  echo "Checking if ReplicationController Tasks is ready on Dev..." 
+			  AVAILABLE_REPLICAS=$(oc get dc tasks -n ${devProject} -o=jsonpath='{.status.availableReplicas}') 
+			  if [[ "$AVAILABLE_REPLICAS" == "1" ]]; then 
+			  	echo "...Yes. Tasks is ready on Dev." 
+			  	break 
+			  fi 
+			  echo "...no. Sleeping 10 seconds." 
+			  sleep 10 
+			  done"
+		
       }
 
       // Copy Image to Nexus container registry
@@ -89,8 +115,9 @@ podTemplate(
         echo "Copy image to Nexus container registry"
 
         // TBD: Copy image to Nexus container registry
-
+        sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${devProject}/tasks:${devTag} docker://nexus3-registry.0a1a-nexus.svc.cluster.local:5000/tasks:${devTag}"
         // TBD: Tag the built image with the production tag.
+		sh "oc tag ${devProject}/tasks:${devTag} ${devProject}/tasks:${prodTag}"
       }
 
       // Blue/Green Deployment into Production
@@ -103,11 +130,57 @@ podTemplate(
         //      Set Image, Set VERSION
         //      Deploy into the other application
         //      Make sure the application is running and ready before proceeding
+		echo "Blue/Green Deployment"
+		script {
+		  openshift.withCluster() {
+			openshift.withProject("${prodProject}") {
+			  activeApp = openshift.selector("route", "tasks").object().spec.to.name
+			  if (activeApp == "tasks-green") {
+			  	destApp = "tasks-blue"
+			  }
+			  echo "Active Application:      " + activeApp
+			  echo "Destination Application: " + destApp
+
+			  // Update the Image on the Production Deployment Config
+			  def dc = openshift.selector("dc/${destApp}").object()
+			  dc.spec.template.spec.containers[0].image="docker-registry.default.svc:5000/${devProject}/tasks:${prodTag}"
+			  openshift.apply(dc)
+
+			  // Update Config Map in change config files changed in the source
+			  openshift.selector("configmap", "${destApp}-config").delete()
+			  def configmap = openshift.create("configmap", "${destApp}-config", "--from-file=./configuration/application-users.properties", "--from-file=./configuration/application-roles.properties" )
+
+			  // Deploy the inactive application.
+			  openshift.selector("dc", "${destApp}").rollout().latest();
+
+			  // Wait for application to be deployed
+			  def dc_prod = openshift.selector("dc", "${destApp}").object()
+			  def dc_version = dc_prod.status.latestVersion
+			  def rc_prod = openshift.selector("rc", "${destApp}-${dc_version}").object()
+			  echo "Waiting for ${destApp} to be ready"
+			  while (rc_prod.spec.replicas != rc_prod.status.readyReplicas) {
+				sleep 5
+				rc_prod = openshift.selector("rc", "${destApp}-${dc_version}").object()
+			  }
+		    }
+		  }
+		}
       }
 
       stage('Switch over to new Version') {
         echo "Switching Production application to ${destApp}."
         // TBD: Execute switch
+		input "Switch Production?"
+        echo "Switching Production application to ${destApp}."
+        script {
+          openshift.withCluster() {
+            openshift.withProject("${prodProject}") {
+              def route = openshift.selector("route/tasks").object()
+              route.spec.to.name="${destApp}"
+              openshift.apply(route)
+            }
+          }
+        }
       }
     }
   }
