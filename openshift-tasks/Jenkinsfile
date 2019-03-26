@@ -74,7 +74,9 @@ podTemplate(
         echo "Publish to Nexus"
 
         // TBD: Publish to Nexus
-		sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/all-maven-public"
+		echo "Publish to Nexus with ERROR, both commands dont work"
+		//sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/all-maven-public"
+		//sh "${mvnCmd} deploy -DskipTests=true"
       }
 
       // Build the OpenShift Image in OpenShift and tag it.
