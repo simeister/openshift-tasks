@@ -97,16 +97,23 @@ podTemplate(
 		sh "oc create configmap tasks-config -n=${devProject} --from-file=./configuration/application-users.properties \
 		--from-file=./configuration/application-roles.properties"
 		sh "oc deploy --latest dc/tasks -n=${devProject}"
-		sh "while : ; do 
-			  echo "Checking if ReplicationController Tasks is ready on Dev..." 
-			  AVAILABLE_REPLICAS=$(oc get dc tasks -n ${devProject} -o=jsonpath='{.status.availableReplicas}') 
-			  if [[ "$AVAILABLE_REPLICAS" == "1" ]]; then 
-			  	echo "...Yes. Tasks is ready on Dev." 
-			  	break 
-			  fi 
-			  echo "...no. Sleeping 10 seconds." 
-			  sleep 10 
-			  done"
+		script {
+		  // Update the Image on the Development Deployment Config
+		  openshift.withCluster() {
+		    openshift.withProject("${devProject}") {
+			  // Wait for application to be deployed
+			  def dc = openshift.selector("dc", "tasks").object()
+			  def dc_version = dc.status.latestVersion
+			  def rc = openshift.selector("rc", "tasks-${dc_version}").object()
+
+			  echo "Waiting for ReplicationController tasks-${dc_version} to be ready"
+			  while (rc.spec.replicas != rc.status.readyReplicas) {
+			  	sleep 10
+				rc = openshift.selector("rc", "tasks-${dc_version}").object()
+			  }
+		    }
+          }
+        }
 		
       }
 
