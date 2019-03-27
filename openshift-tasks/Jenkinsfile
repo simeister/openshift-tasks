@@ -38,9 +38,16 @@ podTemplate(
       // TBD Set the tag for the development image: version + build number
       def devTag  = ""
 	  devTag = "${version}-"+ currentBuild.number
+	  // set dc environment variable VERSION to devTag in Dev
+	  echo "Set dc Environment Variable VERSION in Dev and Prod"
+	  sh "oc set env dc/tasks VERSION=${devTag} -n=${devProject}"
       // Set the tag for the production image: version
       def prodTag = ""
       prodTag = "${version}"
+	  // set dc environment variable VERSION to prodTag in Production
+	  sh "oc set env dc/tasks-green VERSION=${prodTag} -n=${prodProject}"
+	  sh "oc set env dc/tasks-blue VERSION=${prodTag} -n=${prodProject}"
+	  
       // Using Maven build the war file
       // Do not run tests in this step
       stage('Build war') {
@@ -138,6 +145,7 @@ podTemplate(
         // sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:redhat docker://docker-registry.default.svc.cluster.local:5000/${devProject}/tasks:${devTag} docker://nexus3.gpte-hw-cicd.svc.cluster.local:8081/tasks:${devTag}"
 		// TBD: Tag the built image with the production tag.
 		sh "oc tag ${devProject}/tasks:${devTag} ${devProject}/tasks:${prodTag}"
+		
       }
 
       // Blue/Green Deployment into Production
