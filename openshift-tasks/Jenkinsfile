@@ -134,9 +134,9 @@ podTemplate(
         echo "Copy image to Nexus container registry"
 
         // TBD: Copy image to Nexus container registry
-		// echo "copy image to Nexus container registry error - skipped"
+		echo "copy image to Nexus container registry error - skip"
         // sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${devProject}/tasks:${devTag} docker://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/all-maven-public"
-        sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${devProject}/tasks:${devTag} docker://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/releases"
+        sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:redhat docker://docker-registry.default.svc.cluster.local:5000/${devProject}/tasks:${devTag} docker://nexus3.gpte-hw-cicd.svc.cluster.local:8081/tasks:${devTag}"
 		// TBD: Tag the built image with the production tag.
 		sh "oc tag ${devProject}/tasks:${devTag} ${devProject}/tasks:${prodTag}"
       }
