@@ -40,7 +40,7 @@ podTemplate(
 	  devTag = "${version}-"+ currentBuild.number
 	  // set dc environment variable VERSION to devTag in Dev
 	  echo "Set dc Environment Variable VERSION in Dev and Prod"
-      	  sh "oc set env dc/tasks VERSION="${devTag} (tasks-dev)" -n=${devProject}"
+      	  sh "oc set env dc/tasks VERSION='${devTag} (tasks-dev)' -n=${devProject}"
 	  sh "oc start-build tasks --wait=true -n ${devProject}"
 	  sh "oc rollout latest dc/tasks -n ${devProject}"
       // Set the tag for the production image: version
