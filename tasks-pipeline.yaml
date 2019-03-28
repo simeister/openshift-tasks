@@ -1,0 +1,35 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: openshift-tasks
+  name: tasks-pipeline
+  namespace: 0a1a-jenkins
+spec:
+  failedBuildsHistoryLimit: 5
+  nodeSelector: {}
+  output: {}
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    contextDir: openshift-tasks
+    git:
+      ref: master
+      uri: 'https://github.com/simeister/openshift-tasks'
+    type: Git
+  strategy:
+    jenkinsPipelineStrategy:
+      jenkinsfilePath: Jenkinsfile
+    type: JenkinsPipeline
+  successfulBuildsHistoryLimit: 5
+  triggers:
+    - github:
+        secret: 7lzkp3hmB9hkqi6Zq5dr
+      type: GitHub
+    - generic:
+        secret: 1j6rW4jcfUrMIfvzS244
+      type: Generic
+    - type: ConfigChange
+status:
+  lastVersion: 1

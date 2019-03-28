@@ -22,7 +22,10 @@ oc new-build  -D $'FROM docker.io/openshift/jenkins-agent-maven-35-centos7:v3.11
 
 # Create pipeline build config pointing to the ${REPO} with contextDir `openshift-tasks`
 # TBD
-oc new-app https://github.com/simeister/openshift-tasks --context-dir=openshift-tasks -n ${GUID}-jenkins
+# oc new-app https://github.com/simeister/openshift-tasks --context-dir=openshift-tasks -n ${GUID}-jenkins 
+# Grading pipeline uses tasks-pipeline
+oc create -f ../tasks-pipeline.yaml -n ${GUID}-jenkins
+# oc start-build tasks-pipeline -n ${GUID}-jenkins
 # Make sure that Jenkins is fully up and running before proceeding!
 while : ; do
   echo "Checking if Jenkins is Ready..."
