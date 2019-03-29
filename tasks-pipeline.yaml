@@ -1,10 +1,10 @@
-piVersion: build.openshift.io/v1
+apiVersion: build.openshift.io/v1
 kind: BuildConfig
 metadata:
   labels:
     app: openshift-tasks
   name: tasks-pipeline
-  namespace: 0a1a-sme-jenkins
+  namespace: 0a1a-jenkins
 spec:
   failedBuildsHistoryLimit: 5
   nodeSelector: {}
