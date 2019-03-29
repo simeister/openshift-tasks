@@ -22,8 +22,8 @@ spec:
     jenkinsPipelineStrategy:
       jenkinsfilePath: Jenkinsfile
           env: 
-      - name: GUID 
-        value: ${GUID} 
+        - name: GUID 
+          value: ${GUID} 
     type: JenkinsPipeline
   successfulBuildsHistoryLimit: 5
   triggers:
@@ -36,3 +36,4 @@ spec:
     - type: ConfigChange
 status:
   lastVersion: 1
+
