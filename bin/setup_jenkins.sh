@@ -25,7 +25,42 @@ oc new-build  -D $'FROM docker.io/openshift/jenkins-agent-maven-35-centos7:v3.11
 # TBD
 # oc new-app https://github.com/simeister/openshift-tasks --context-dir=openshift-tasks -n ${GUID}-jenkins 
 # Grading pipeline uses tasks-pipeline
-oc create -f ../tasks-pipeline.yaml -n ${GUID}-jenkins
+# works only if executed on own VM: oc create -f ../tasks-pipeline.yaml -n ${GUID}-jenkins
+echo "apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: openshift-tasks
+  name: tasks-pipeline
+  namespace: ${GUID}-jenkins
+spec:
+  failedBuildsHistoryLimit: 5
+  nodeSelector: {}
+  output: {}
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    contextDir: openshift-tasks
+    git:
+      ref: master
+      uri: '${REPO}'
+    type: Git
+  strategy:
+    jenkinsPipelineStrategy:
+      jenkinsfilePath: Jenkinsfile 
+    type: JenkinsPipeline
+  successfulBuildsHistoryLimit: 5
+  triggers:
+    - github:
+        secret: 7lzkp3hmB9hkqi6Zq5dr
+      type: GitHub
+    - generic:
+        secret: 1j6rW4jcfUrMIfvzS244
+      type: Generic
+    - type: ConfigChange
+status:
+  lastVersion: 1" | oc create -f - -n ${GUID}-jenkins
 oc set env bc/tasks-pipeline GUID=${GUID} -n ${GUID}-jenkins
 # oc start-build tasks-pipeline -n ${GUID}-jenkins
 # Make sure that Jenkins is fully up and running before proceeding!
