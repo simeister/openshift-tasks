@@ -4,7 +4,7 @@ metadata:
   labels:
     app: openshift-tasks
   name: tasks-pipeline
-  namespace: 0a1a-jenkins
+  namespace: 0a1a-sme-jenkins
 spec:
   failedBuildsHistoryLimit: 5
   nodeSelector: {}
@@ -21,6 +21,9 @@ spec:
   strategy:
     jenkinsPipelineStrategy:
       jenkinsfilePath: Jenkinsfile
+          env: 
+      - name: GUID 
+        value: ${GUID} 
     type: JenkinsPipeline
   successfulBuildsHistoryLimit: 5
   triggers:
