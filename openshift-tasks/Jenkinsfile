@@ -48,8 +48,8 @@ podTemplate(
       def prodTag = ""
       prodTag = "${version}"
 	  // set dc environment variable VERSION to prodTag in Production
-	  sh "oc set env dc/tasks-green VERSION='${prodTag} (tasks-green) (tasks-blue)' -n=${prodProject}"
-	  sh "oc set env dc/tasks-blue VERSION='${prodTag} (tasks-blue) (tasks-green)' -n=${prodProject}"
+	  sh "oc set env dc/tasks-green VERSION='${prodTag} (tasks-green)' -n=${prodProject}"
+	  sh "oc set env dc/tasks-blue VERSION='${prodTag} (tasks-blue)' -n=${prodProject}"
 	  
       // Using Maven build the war file
       // Do not run tests in this step
