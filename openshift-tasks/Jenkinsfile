@@ -216,7 +216,7 @@ podTemplate(
               def route = openshift.selector("route/tasks").object()
               route.spec.to.name="${destApp}"
               openshift.apply(route)
-			  sleep 20
+			  sleep 180
             }
           }
         }
